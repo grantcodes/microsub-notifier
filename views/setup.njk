@@ -1,0 +1,61 @@
+{% extends "base.njk" %}
+
+{% block content %}
+  <form action="/setup" method="post">
+    <fieldset>
+      <legend>Channel Notifications</legend>
+      {% for channel in channels %}
+        <p>
+          <label>
+            <input
+              type="checkbox"
+              name="channels[]"
+              value="{{channel.uid}}"
+              {{'checked' if user.notificationChannels and user.notificationChannels.hasOwnProperty(channel.uid)}}
+            />
+            {{channel.name}}
+          </label>
+        </p>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset>
+      <legend>Webhooks</legend>
+      {% raw %}
+        <p>You can write your own json objects to send to the webhook url.</p>
+        <p>You can use template varables using <code>{{}}</code> wrappers. Channel and post objects are available.</p>
+      {% endraw %}
+
+      {% for webhook in user.notifiers.webhooks %}
+        <p>
+          <label>
+            url <br />
+            <input type="url" value="{{webhook.url}}" name="webhook[]" />
+          </label>
+        </p>
+        <p>
+          <label>
+            JSON <br />
+            <textarea name="webhook_json[]" cols="30" rows="10">{{webhook.json}}</textarea>
+          </label>
+        </p>
+      {% endfor %}
+
+      <h3>Add new webhook</h3>
+      <p>
+        <label>
+          url <br />
+          <input type="url" name="webhook[]" />
+        </label>
+      </p>
+      <p>
+        <label>
+          JSON <br />
+          <textarea name="webhook_json[]" cols="30" rows="10">{{defaultWebhookJson}}</textarea>
+        </label>
+      </p>
+    </fieldset>
+
+    <button type="submit">Save</button>
+  </form>
+{% endblock %}
