@@ -15,6 +15,7 @@ const notify = require('./lib/notifier')
 schedule.scheduleJob('* * * * *', notify)
 
 const app = new express()
+const appUrl = process.env.url || 'https://microsub-notifier.tpxl.io'
 
 const getUser = me =>
   db
@@ -90,8 +91,8 @@ app.get('/login', async (req, res) => {
       me: user.me,
       authEndpoint: user.authEndpoint,
       tokenEndpoint: user.tokenEndpoint,
-      clientId: 'https://microsub-notifier.tpxl.io',
-      redirectUri: 'https://microsub-notifier.tpxl.io/auth',
+      clientId: `${appUrl}`,
+      redirectUri: `${appUrl}/auth`,
       scope: 'read',
     })
 
@@ -113,8 +114,8 @@ app.get('/auth', async (req, res) => {
       me: user.me,
       code: req.query.code,
       scope: 'read',
-      client_id: 'https://microsub-notifier.tpxl.io',
-      redirect_uri: 'https://microsub-notifier.tpxl.io/auth',
+      client_id: `${appUrl}`,
+      redirect_uri: `${appUrl}/auth`,
     }
 
     const request = {
@@ -128,7 +129,10 @@ app.get('/auth', async (req, res) => {
       },
     }
 
-    const response = await axios(request)
+    let response = await axios(request)
+    if (typeof response.data === 'string') {
+      response.data = querystring.parse(response.data)
+    }
 
     if (response.data && response.data.access_token) {
       db.get('users')
