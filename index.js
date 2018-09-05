@@ -102,41 +102,48 @@ app.get('/login', async (req, res) => {
 })
 
 app.get('/auth', async (req, res) => {
-  const user = await getUser(req.query.me)
-  if (!user) {
-    return res.render('error', { message: 'Error finding user' })
-  }
+  try {
+    const user = await getUser(req.query.me)
+    if (!user) {
+      return res.render('error', { message: 'Error finding user' })
+    }
 
-  const data = {
-    grant_type: 'authorization_code',
-    me: user.me,
-    code: req.query.code,
-    scope: 'read',
-    client_id: 'https://microsub-notifier.tpxl.io',
-    redirect_uri: 'https://microsub-notifier.tpxl.io/auth',
-  }
+    const data = {
+      grant_type: 'authorization_code',
+      me: user.me,
+      code: req.query.code,
+      scope: 'read',
+      client_id: 'https://microsub-notifier.tpxl.io',
+      redirect_uri: 'http://localhost:3000/auth',
+    }
 
-  const request = {
-    url: user.tokenEndpoint,
-    method: 'POST',
-    timeout: 6000,
-    data: querystring.stringify(data),
-    headers: {
-      'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
-      accept: 'application/json, application/x-www-form-urlencoded',
-    },
-  }
+    const request = {
+      url: user.tokenEndpoint,
+      method: 'POST',
+      timeout: 6000,
+      data: querystring.stringify(data),
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        accept: 'application/json, application/x-www-form-urlencoded',
+      },
+    }
 
-  const response = await axios(request)
+    const response = await axios(request)
 
-  if (response.data && response.data.access_token) {
-    db.get('users')
-      .find({ me: user.me })
-      .set('token', response.data.access_token)
-      .write()
-    res.redirect('/setup')
-  } else {
-    res.render('error', { message: 'Error getting token' })
+    if (response.data && response.data.access_token) {
+      db.get('users')
+        .find({ me: user.me })
+        .set('token', response.data.access_token)
+        .write()
+      res.redirect('/setup')
+    } else {
+      res.render('error', { message: 'Error getting token' })
+    }
+  } catch (err) {
+    console.log('Error getting token', err)
+    res.render('error', {
+      message: `Error getting token: ${JSON.stringify(err, null, 2)}`,
+    })
   }
 })
 
