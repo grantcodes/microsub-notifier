@@ -58,7 +58,10 @@ app.get('/login', async (req, res) => {
       !rels.token_endpoint ||
       !rels.microsub
     ) {
-      res.end('Missing endpoints')
+      console.log('Missing rels from ' + req.query.me, rels)
+      res.render('error', {
+        message: 'There was an error finding one of your required endpoints',
+      })
     }
 
     const existingUser = await getUser(req.session.me)
