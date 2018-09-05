@@ -5,7 +5,7 @@ const bodyParser = require('body-parser')
 const session = require('express-session')
 const nunjucks = require('nunjucks')
 const axios = require('axios')
-const relScraper = require('rel-scraper')
+const relParser = require('rel-parser')
 const schedule = require('node-schedule')
 const IndieAuthentication = require('indieauth-authentication')
 const db = require('./lib/db')
@@ -52,7 +52,7 @@ app.get('/', (req, res) => {
 app.get('/login', async (req, res) => {
   if (req.query.me) {
     req.session.me = req.query.me
-    const rels = await relScraper(req.query.me)
+    const rels = await relParser(req.query.me)
     if (
       !rels.authorization_endpoint ||
       !rels.token_endpoint ||
