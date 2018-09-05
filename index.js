@@ -137,6 +137,7 @@ app.get('/auth', async (req, res) => {
         .write()
       res.redirect('/setup')
     } else {
+      console.log('Bad response from token endpoint', response)
       res.render('error', { message: 'Error getting token' })
     }
   } catch (err) {
