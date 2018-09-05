@@ -114,7 +114,7 @@ app.get('/auth', async (req, res) => {
       code: req.query.code,
       scope: 'read',
       client_id: 'https://microsub-notifier.tpxl.io',
-      redirect_uri: 'http://localhost:3000/auth',
+      redirect_uri: 'https://microsub-notifier.tpxl.io/auth',
     }
 
     const request = {
