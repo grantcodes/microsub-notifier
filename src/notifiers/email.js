@@ -79,7 +79,7 @@ const sender = async ({ options, channel, post }) => {
         </head>
         <body>
           <h1>{{post.name}}</h1>
-          {{post.content.html}}
+          {{post.content.html|safe}}
           <hr />
           <p><small>
             Originally found on your {{channel.name}} microsub channel
