@@ -1,21 +1,18 @@
-require('dotenv').config()
-const querystring = require('querystring')
-const express = require('express')
-const bodyParser = require('body-parser')
-const session = require('express-session')
-const nunjucks = require('nunjucks')
-const axios = require('axios')
-const relParser = require('rel-parser')
-const schedule = require('node-schedule')
-const IndieAuthentication = require('indieauth-authentication')
-const db = require('./lib/db')
-const notify = require('./lib/notifier')
+import querystring from 'querystring'
+import express from 'express'
+import bodyParser from 'body-parser'
+import axios from 'axios'
+import relParser from 'rel-parser'
+import schedule from 'node-schedule'
+import IndieAuthentication from 'indieauth-authentication'
+import db from './lib/db'
+import notify from './lib/notifier'
 
 // Run notifier every minute
 schedule.scheduleJob('* * * * *', notify)
 
-const app = new express()
-const appUrl = process.env.url || 'https://microsub-notifier.tpxl.io'
+const app = express.Router()
+const appUrl = process.env.RAZZLE_URL || 'https://microsub-notifier.tpxl.io'
 
 const getUser = me =>
   db
@@ -23,63 +20,42 @@ const getUser = me =>
     .find({ me })
     .value()
 
-nunjucks.configure('views', {
-  autoescape: true,
-  express: app,
-})
-
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
 
-var sess = {
-  secret: 'super secret session',
-  cookie: {},
-}
-
-if (app.get('env') === 'production') {
-  app.set('trust proxy', 1) // trust first proxy
-  sess.cookie.secure = true // serve secure cookies
-}
-
-app.use(session(sess))
-
-app.set('views', __dirname + '/views')
-app.set('view engine', 'njk')
-
-app.get('/', (req, res) => {
-  res.render('home', {})
-})
-
-app.get('/login', async (req, res) => {
-  if (req.query.me) {
-    req.session.me = req.query.me
-    const rels = await relParser(req.query.me)
+app.post('/login', async (req, res) => {
+  console.log('Logging in', req.body)
+  if (req.body.me) {
+    req.session.me = req.body.me
+    const rels = await relParser(req.body.me)
     if (
       !rels.authorization_endpoint ||
       !rels.token_endpoint ||
       !rels.microsub
     ) {
-      console.log('Missing rels from ' + req.query.me, rels)
-      res.render('error', {
-        message: 'There was an error finding one of your required endpoints',
-      })
+      console.log('Missing rels from ' + req.body.me, rels)
+      if (req && req.session)
+        req.session.error = 'Could not find your endpoints'
+      return res.redirect('/error')
     }
 
     const existingUser = await getUser(req.session.me)
 
     const user = {
-      me: req.query.me,
+      me: req.body.me,
       authEndpoint: rels.authorization_endpoint[0],
       tokenEndpoint: rels.token_endpoint[0],
       microsubEndpoint: rels.microsub[0],
+      state: Date.now() + 'msnotifier',
     }
 
     if (existingUser) {
       db.get('users')
-        .find({ me: req.query.me })
+        .find({ me: req.body.me })
         .set('authEndpoint', rels.authorization_endpoint[0])
         .set('tokenEndpoint', rels.token_endpoint[0])
         .set('microsubEndpoint', rels.microsub[0])
+        .set('state', user.state)
         .write()
     } else {
       db.get('users')
@@ -92,8 +68,9 @@ app.get('/login', async (req, res) => {
       authEndpoint: user.authEndpoint,
       tokenEndpoint: user.tokenEndpoint,
       clientId: `${appUrl}`,
-      redirectUri: `${appUrl}/auth`,
+      redirectUri: `${appUrl}/api/auth`,
       scope: 'read',
+      state: user.state,
     })
 
     const authUrl = await auth.getAuthUrl()
@@ -106,16 +83,18 @@ app.get('/auth', async (req, res) => {
   try {
     const user = await getUser(req.query.me)
     if (!user) {
-      return res.render('error', { message: 'Error finding user' })
+      // return res.render("error", { message: "Error finding user" });
+      if (req && req.session)
+        req.session.error = 'Error getting your user data from the database'
+      return res.redirect('/error')
     }
 
     const data = {
       grant_type: 'authorization_code',
       me: user.me,
       code: req.query.code,
-      scope: 'read',
       client_id: `${appUrl}`,
-      redirect_uri: `${appUrl}/auth`,
+      redirect_uri: `${appUrl}/api/auth`,
     }
 
     const request = {
@@ -135,73 +114,68 @@ app.get('/auth', async (req, res) => {
     }
 
     if (response.data && response.data.access_token) {
+      // Get microsub channels
+      const channels = await axios({
+        method: 'get',
+        url: `${user.microsubEndpoint}/?action=channels`,
+        responseType: 'json',
+        timeout: 8000,
+        headers: {
+          Authorization: 'Bearer ' + user.token,
+        },
+      })
+
+      if (!channels || !channels.data || !channels.data.channels) {
+        if (req.session) {
+          req.session.error = 'Error getting channels'
+        }
+        res.redirect('/error')
+      }
       db.get('users')
         .find({ me: user.me })
         .set('token', response.data.access_token)
+        .set('channels', channels.data.channels)
         .write()
       res.redirect('/setup')
     } else {
       console.log('Bad response from token endpoint', response)
-      res.render('error', { message: 'Error getting token' })
+      // res.render("error", { message: "Error getting token" });
+      if (req && req.session)
+        req.session.error = 'Bad response from token endpoint'
+      res.redirect('/error')
     }
   } catch (err) {
     console.log('Error getting token', err)
-    res.render('error', {
-      message: `Error getting token: ${JSON.stringify(err, null, 2)}`,
-    })
+    // res.render("error", {
+    //   message: `Error getting token: ${JSON.stringify(err, null, 2)}`
+    // });
+    if (req && req.session) req.session.error = 'Error getting token'
+    res.redirect('/error')
   }
 })
 
-app.get('/setup', async (req, res) => {
-  try {
-    const user = await getUser(req.session.me)
-    if (!user) {
-      return res.render('error', { message: "You're not logged in" })
-    }
-    // Get microsub channels
-    const channels = await axios({
-      method: 'get',
-      url: `${user.microsubEndpoint}/?action=channels`,
-      responseType: 'json',
-      timeout: 8000,
-      headers: {
-        Authorization: 'Bearer ' + user.token,
-      },
-    })
-
-    if (!channels || !channels.data || !channels.data.channels) {
-      return res.render('error', { message: 'Error getting channels' })
-    }
-
-    db.get('users')
-      .find({ me: user.me })
-      .set('channels', channels.data.channels)
-      .write()
-
-    const defaultWebhookJson = JSON.stringify(
-      {
-        value1: '{{channel.name}}',
-        value2: '{{post.name}}',
-      },
-      null,
-      2
-    )
-
-    res.render('setup', {
-      user,
-      channels: channels.data.channels,
-      defaultWebhookJson,
-    })
-  } catch (err) {
-    console.log('Setup page error', err)
-    res.render('error', { message: 'Uh oh ' + err })
+app.post('/notifiers', (req, res) => {
+  if (!req.body.notifiers) {
+    return res.status(400).json({ error: 'Missing notifiers' })
   }
+  if (!req.session.me) {
+    return res.json({ error: 'Not logged in' })
+  }
+
+  db.get('users')
+    .find({ me: req.session.me })
+    .set('notifiers', req.body.notifiers)
+    .write()
+  res.json({ error: null })
 })
 
 app.post('/setup', async (req, res) => {
   const user = await getUser(req.session.me)
   if (!user) {
-    return res.render('error', { message: 'You need to log in' })
+    // return res.render("error", { message: "You need to log in" });
+    if (req && req.session)
+      req.session.error = 'You need to be logged in to update your settings'
+    return res.redirect('/error')
   }
   let webhooks = req.body.webhook
 
@@ -249,8 +223,4 @@ app.post('/setup', async (req, res) => {
   res.redirect('/setup')
 })
 
-const port = process.env.port || 3000
-async function init() {
-  app.listen(port, () => console.log(`listening on port ${port}`))
-}
-init()
+export default app
