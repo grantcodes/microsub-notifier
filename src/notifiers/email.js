@@ -38,18 +38,6 @@ const Notifier = ({ options, setOptions }) => (
         required
       />
     </FormItem>
-    <FormItem>
-      <Checkbox
-        checked={options.attachHtml}
-        onChange={e =>
-          setOptions(
-            Object.assign({}, options, { attachHtml: e.target.checked })
-          )
-        }
-      >
-        Attach as html file (can be used to send to kindle)
-      </Checkbox>
-    </FormItem>
     <small>
       You can use{' '}
       <a
@@ -70,28 +58,7 @@ const sender = async ({ options, channel, post }) => {
   const email = options.email
   const subject = nunjucks.renderString(options.subject, { channel, post })
   const message = nunjucks.renderString(options.message, { channel, post })
-  const htmlAttachment = options.attachHtml
-    ? nunjucks.renderString(
-        `
-      <html>
-        <head>
-          <title>{{post.name}} - via {{channel.name}}</title>
-        </head>
-        <body>
-          <h1>{{post.name}}</h1>
-          {{post.content.html|safe}}
-          <hr />
-          <p><small>
-            Originally found on your {{channel.name}} microsub channel
-            and delivered via <a href="https://microsub-notifier.tpxl.io">Microsub Notifier</a>
-          </small></p>
-        </body>
-      </html>
-    `,
-        { channel, post }
-      )
-    : null
-  await mailer(email, subject, message, htmlAttachment)
+  await mailer(email, subject, message)
   return true
 }
 
@@ -102,7 +69,6 @@ export default {
     email: '',
     subject: "Hey there's a new post in your microsub server",
     message: '{{channel.name}} - {{post.name}} {{post.content.text}}',
-    attachHtml: false,
   },
   component: Notifier,
   sender,
