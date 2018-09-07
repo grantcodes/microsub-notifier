@@ -100,6 +100,8 @@ class Setup extends Component {
         })
         if (!res || res.error) {
           alert('Error setting notifiers')
+        } else {
+          alert('Saved your notifications')
         }
       } catch (err) {
         alert('Error setting notifiers')
