@@ -67,7 +67,7 @@ const notify = async () => {
                 await sender({
                   options: notifier.notifier.options,
                   channel: post.channel,
-                  post: post,
+                  post: post.post,
                 })
               } catch (err) {
                 console.log(
