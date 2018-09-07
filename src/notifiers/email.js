@@ -36,14 +36,14 @@ const Notifier = ({ options, setOptions }) => (
         }
         required
       />
-      small>
+      <small>
         You can use{' '}
         <a href="https://mozilla.github.io/nunjucks/" target="_blank">
           nunjucks
         </a>{' '}
-        templating inside the subject and message to pull out information on the post and
-        channel. A <code>{'{{post}}'}</code> and <code>{'{{channel}}'}</code>{' '}
-        are both available
+        templating inside the subject and message to pull out information on the
+        post and channel. A <code>{'{{post}}'}</code> and{' '}
+        <code>{'{{channel}}'}</code> are both available
       </small>
     </FormItem>
   </Fragment>
