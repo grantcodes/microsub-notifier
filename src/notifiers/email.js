@@ -70,7 +70,7 @@ const sender = async ({ options, channel, post }) => {
   const email = options.email
   const subject = nunjucks.renderString(options.subject, { channel, post })
   const message = nunjucks.renderString(options.message, { channel, post })
-  const htmlAttachment = options.htmlAttachment
+  const htmlAttachment = options.attachHtml
     ? nunjucks.renderString(
         `
       <html>
