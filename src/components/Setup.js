@@ -107,7 +107,6 @@ class Setup extends Component {
         alert('Error setting notifiers')
       }
       this.setState({ loading: false })
-      console.log('Submitting', sets, e)
     }
     return false
   }

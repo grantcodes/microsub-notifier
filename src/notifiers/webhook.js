@@ -26,16 +26,20 @@ const Notifier = ({ options, setOptions }) => (
         }
         required
       />
-      <small>
-        You can use{' '}
-        <a href="https://mozilla.github.io/nunjucks/" target="_blank">
-          nunjucks
-        </a>{' '}
-        templating inside your json to pull out information on the post and
-        channel. A <code>{'{{post}}'}</code> and <code>{'{{channel}}'}</code>{' '}
-        are both available
-      </small>
     </FormItem>
+    <small>
+      You can use{' '}
+      <a
+        href="https://mozilla.github.io/nunjucks/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        nunjucks
+      </a>{' '}
+      templating inside your json to pull out information on the post and
+      channel. A <code>{'{{post}}'}</code> and <code>{'{{channel}}'}</code> are
+      both available
+    </small>
   </Fragment>
 )
 

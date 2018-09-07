@@ -1,5 +1,5 @@
 import React, { Fragment } from 'react'
-import { Form, Input } from 'antd'
+import { Form, Input, Checkbox } from 'antd'
 import nunjucks from 'nunjucks'
 import mailer from '../server/lib/mailer'
 const FormItem = Form.Item
@@ -7,6 +7,7 @@ const TextArea = Input.TextArea
 
 const Notifier = ({ options, setOptions }) => (
   <Fragment>
+    <small>Emails are sent from microsub-notifier@tpxl.io</small>
     <FormItem label="Email Address">
       <Input
         value={options.email}
@@ -36,16 +37,32 @@ const Notifier = ({ options, setOptions }) => (
         }
         required
       />
-      <small>
-        You can use{' '}
-        <a href="https://mozilla.github.io/nunjucks/" target="_blank">
-          nunjucks
-        </a>{' '}
-        templating inside the subject and message to pull out information on the
-        post and channel. A <code>{'{{post}}'}</code> and{' '}
-        <code>{'{{channel}}'}</code> are both available
-      </small>
     </FormItem>
+    <FormItem>
+      <Checkbox
+        checked={options.attachHtml}
+        onChange={e =>
+          setOptions(
+            Object.assign({}, options, { attachHtml: e.target.checked })
+          )
+        }
+      >
+        Attach as html file (can be used to send to kindle)
+      </Checkbox>
+    </FormItem>
+    <small>
+      You can use{' '}
+      <a
+        href="https://mozilla.github.io/nunjucks/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        nunjucks
+      </a>{' '}
+      templating inside the subject and message to pull out information on the
+      post and channel. A <code>{'{{post}}'}</code> and{' '}
+      <code>{'{{channel}}'}</code> are both available
+    </small>
   </Fragment>
 )
 
@@ -53,7 +70,28 @@ const sender = async ({ options, channel, post }) => {
   const email = options.email
   const subject = nunjucks.renderString(options.subject, { channel, post })
   const message = nunjucks.renderString(options.message, { channel, post })
-  await mailer(email, subject, message)
+  const htmlAttachment = options.htmlAttachment
+    ? nunjucks.renderString(
+        `
+      <html>
+        <head>
+          <title>{{post.name}} - via {{channel.name}}</title>
+        </head>
+        <body>
+          <h1>{{post.name}}</h1>
+          {{post.content.html}}
+          <hr />
+          <p><small>
+            Originally found on your {{channel.name}} microsub channel
+            and delivered via <a href="https://microsub-notifier.tpxl.io">Microsub Notifier</a>
+          </small></p>
+        </body>
+      </html>
+    `,
+        { channel, post }
+      )
+    : null
+  await mailer(email, subject, message, htmlAttachment)
   return true
 }
 
@@ -64,6 +102,7 @@ export default {
     email: '',
     subject: "Hey there's a new post in your microsub server",
     message: '{{channel.name}} - {{post.name}} {{post.content.text}}',
+    attachHtml: false,
   },
   component: Notifier,
   sender,

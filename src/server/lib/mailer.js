@@ -1,4 +1,4 @@
-let mailer = (email, subject, message) =>
+let mailer = (email, subject, message, htmlAttachment = null) =>
   new Promise((resolve, reject) => {
     let nodemailer = null
     if (process.env.BUILD_TARGET === 'server') {
@@ -11,22 +11,30 @@ let mailer = (email, subject, message) =>
         path: '/usr/sbin/sendmail',
       })
 
-      transporter.sendMail(
-        {
-          from: 'microsub-notifier@tpxl.io',
-          to: email,
-          subject: subject,
-          text: message,
-        },
-        (err, info) => {
-          if (err) {
-            reject(err)
-          } else {
-            console.log('Email sent')
-            resolve()
-          }
+      let mail = {
+        from: 'microsub-notifier@tpxl.io',
+        to: email,
+        subject: subject,
+        text: message,
+      }
+
+      if (htmlAttachment) {
+        mail.attachments = [
+          {
+            filename: 'article.html',
+            content: htmlAttachment,
+          },
+        ]
+      }
+
+      transporter.sendMail(mail, (err, info) => {
+        if (err) {
+          reject(err)
+        } else {
+          console.log('Email sent')
+          resolve()
         }
-      )
+      })
     }
   })
 
