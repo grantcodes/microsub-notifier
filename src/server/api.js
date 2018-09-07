@@ -121,7 +121,7 @@ app.get('/auth', async (req, res) => {
         responseType: 'json',
         timeout: 8000,
         headers: {
-          Authorization: 'Bearer ' + user.token,
+          Authorization: 'Bearer ' + response.data.access_token,
         },
       })
 
