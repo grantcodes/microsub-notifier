@@ -4,7 +4,6 @@ import bodyParser from 'body-parser'
 import axios from 'axios'
 import relParser from 'rel-parser'
 import schedule from 'node-schedule'
-import IndieAuthentication from 'indieauth-authentication'
 import db from './lib/db'
 import notify from './lib/notifier'
 
@@ -63,19 +62,18 @@ app.post('/login', async (req, res) => {
         .write()
     }
 
-    const auth = new IndieAuthentication({
+    const authParams = {
       me: user.me,
-      authEndpoint: user.authEndpoint,
-      tokenEndpoint: user.tokenEndpoint,
-      clientId: `${appUrl}`,
-      redirectUri: `${appUrl}/api/auth`,
+      client_id: appUrl,
+      redirect_uri: `${appUrl}/api/auth`,
+      response_type: 'code',
       scope: 'read',
       state: user.state,
-    })
+    }
 
-    const authUrl = await auth.getAuthUrl()
+    const authUrl = user.authEndpoint + '?' + querystring.stringify(authParams)
 
-    res.redirect(authUrl + `&scope=read`)
+    res.redirect(authUrl)
   }
 })
 
