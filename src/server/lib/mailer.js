@@ -21,7 +21,7 @@ let mailer = (email, subject, message, htmlAttachment = null) =>
       if (htmlAttachment) {
         mail.attachments = [
           {
-            filename: 'article.html',
+            filename: subject ? `${subject}.html` : 'article.html',
             content: htmlAttachment,
           },
         ]
