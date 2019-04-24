@@ -3,10 +3,10 @@
   "version": "2.0.0-alpha.8",
   "license": "MIT",
   "scripts": {
-    "start": "razzle start",
+    "dev": "razzle start",
     "build": "razzle build",
     "test": "razzle test --env=jsdom",
-    "start:prod": "NODE_ENV=production node build/server.js"
+    "start": "NODE_ENV=production node build/server.js"
   },
   "dependencies": {
     "antd": "^3.9.1",
